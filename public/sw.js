@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bookcircle-cache-v1';
+const CACHE_NAME = 'bookcircle-cache-v3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
 
 // Install Event
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS_TO_CACHE);
@@ -27,15 +28,33 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
 // Fetch Event
 self.addEventListener('fetch', (event) => {
-    // We only cache GET requests
     if (event.request.method !== 'GET') return;
 
+    const url = new URL(event.request.url);
+
+    // Network-First for HTML/Entry to ensure updates are seen
+    if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname.startsWith('/pages')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Cache-First for static assets
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) {
@@ -43,8 +62,6 @@ self.addEventListener('fetch', (event) => {
             }
 
             return fetch(event.request).then((response) => {
-                // Don't cache if not a success or if it's external (like Supabase/Google Books)
-                // unless you specifically want to cache those. For now, keep it simple.
                 if (!response || response.status !== 200 || response.type !== 'basic') {
                     return response;
                 }
@@ -55,8 +72,6 @@ self.addEventListener('fetch', (event) => {
                 });
 
                 return response;
-            }).catch(() => {
-                // If fetch fails (offline) and no cache, you could return an offline page here
             });
         })
     );

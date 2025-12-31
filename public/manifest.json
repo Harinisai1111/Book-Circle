@@ -1,0 +1,22 @@
+{
+    "name": "BookCircle - Social Reading",
+    "short_name": "BookCircle",
+    "description": "Connect with readers, track your shelf, and share your reading journey.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#fffcf9",
+    "theme_color": "#ff7a59",
+    "icons": [
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/favicon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "BookCircle",
+  "description": "A cozy, aesthetic social platform for readers to share current reads, join communities, and discover books through people.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

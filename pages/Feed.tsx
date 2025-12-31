@@ -520,9 +520,6 @@ export const Feed: React.FC = () => {
                     <MessageCircle size={24} />
                     <span>{post.comments.length}</span>
                   </button>
-                  <button className="flex items-center gap-2.5 text-[#8d6e63] hover:text-[#ffc247] text-base font-black transition-all hover:scale-110 ml-auto">
-                    <Share2 size={24} />
-                  </button>
                 </div>
               </div>
             );

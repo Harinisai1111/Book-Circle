@@ -13,13 +13,15 @@ export const ReliableImage: React.FC<ReliableImageProps> = ({
     src,
     alt,
     className = "",
-    timeout = 3000
+    timeout = 5000
 }) => {
     const [imgSrc, setImgSrc] = useState<string>(src || FALLBACK_SVG);
     const [loading, setLoading] = useState(!!src);
     const [error, setError] = useState(false);
+    const loadingRef = React.useRef(!!src);
 
     useEffect(() => {
+        loadingRef.current = !!src;
         if (!src) {
             setImgSrc(FALLBACK_SVG);
             setLoading(false);
@@ -31,7 +33,7 @@ export const ReliableImage: React.FC<ReliableImageProps> = ({
         setError(false);
 
         const timer = setTimeout(() => {
-            if (loading) {
+            if (loadingRef.current) {
                 setImgSrc(FALLBACK_SVG);
                 setLoading(false);
                 setError(true);
@@ -43,10 +45,12 @@ export const ReliableImage: React.FC<ReliableImageProps> = ({
     }, [src, timeout]);
 
     const handleLoad = () => {
+        loadingRef.current = false;
         setLoading(false);
     };
 
     const handleError = () => {
+        loadingRef.current = false;
         setImgSrc(FALLBACK_SVG);
         setLoading(false);
         setError(true);

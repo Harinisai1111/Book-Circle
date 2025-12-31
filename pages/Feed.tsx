@@ -56,7 +56,10 @@ export const Feed: React.FC = () => {
     // Subscribe to real-time post updates (Inserts, Updates, Deletes)
     const unsubscribePosts = subscribeToPostUpdates((payload) => {
       if (payload.event === 'INSERT') {
-        setPosts(prev => [payload.post!, ...prev]);
+        setPosts(prev => {
+          if (prev.some(p => p.id === payload.post!.id)) return prev;
+          return [payload.post!, ...prev];
+        });
       } else if (payload.event === 'UPDATE') {
         setPosts(prev => prev.map(p => p.id === payload.post!.id ? { ...p, ...payload.post } : p));
       } else if (payload.event === 'DELETE') {
@@ -69,11 +72,14 @@ export const Feed: React.FC = () => {
       const { like, event } = payload;
       setPosts(prev => prev.map(p => {
         if (p.id === like.post_id) {
+          const alreadyHasLike = p.likes.includes(like.user_id);
+          if (event === 'INSERT' && alreadyHasLike) return p;
+          if (event === 'DELETE' && !alreadyHasLike) return p;
+
           const newLikes = event === 'INSERT'
             ? [...p.likes, like.user_id]
             : p.likes.filter(id => id !== like.user_id);
-          // Only update if the user isn't matching (since local state manages its own likes)
-          // But actually, for cross-device sync, we just update it.
+
           return { ...p, likes: Array.from(new Set(newLikes)) };
         }
         return p;

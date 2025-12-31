@@ -51,7 +51,12 @@ export const Communities: React.FC = () => {
         setMessages(msgs);
 
         unsubscribe = subscribeToCommunityMessages(selectedCommunity.id, (msg) => {
-          setMessages(prev => [...prev.filter(m => m.id !== msg.id), msg]);
+          setMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) {
+              return prev.map(m => m.id === msg.id ? msg : m);
+            }
+            return [...prev, msg];
+          });
         });
       }
     };

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { Post, Book } from '../types';
-import { Heart, MessageCircle, Share2, Plus, X, Camera, Sparkles, Send, Search, BookOpen, Coffee, Ghost, Sun, Moon, Zap } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Plus, X, Camera, Sparkles, Send, Search, BookOpen, Coffee, Ghost, Sun, Moon, Zap, Trash2 } from 'lucide-react';
 import { searchBooks } from '../openLibraryService';
 import { editBookPhoto } from '../geminiService';
-import { getPosts, createPost, toggleLike, subscribeToPostUpdates, addComment, subscribeToComments, subscribeToLikes, subscribeToAllComments } from '../services/postService';
+import { getPosts, createPost, toggleLike, subscribeToPostUpdates, addComment, subscribeToComments, subscribeToLikes, subscribeToAllComments, deletePost } from '../services/postService';
 import { getAllUsers } from '../services/userService';
 import { ReliableImage } from '../components/ReliableImage';
 
@@ -193,6 +193,14 @@ export const Feed: React.FC = () => {
       setPage('');
       setMood('');
       setImage(null);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!user || !window.confirm('Forget this memory?')) return;
+    const success = await deletePost(postId, user.id);
+    if (success) {
+      setPosts(prev => prev.filter(p => p.id !== postId));
     }
   };
 
@@ -470,8 +478,19 @@ export const Feed: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <div className="ml-auto text-[10px] font-black uppercase tracking-widest text-[#ff7a59] bg-[#fff5f0] px-4 py-2 rounded-full border border-[#ffe0cc]">
-                    {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="ml-auto flex items-center gap-3">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-[#ff7a59] bg-[#fff5f0] px-4 py-2 rounded-full border border-[#ffe0cc]">
+                      {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    {user?.id === post.userId && (
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        className="p-2 text-[#d32f2f] hover:bg-red-50 rounded-xl transition-all"
+                        title="Delete Post"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
 

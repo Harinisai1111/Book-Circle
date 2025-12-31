@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import { getCommunities, joinCommunity, leaveCommunity, isMember } from '../services/communityService';
+import { getCommunities, joinCommunity, leaveCommunity, isMember, createCommunity } from '../services/communityService';
 import { getCommunityMessages, sendCommunityMessage, subscribeToCommunityMessages } from '../services/communityMessageService';
 import { Community, GroupMessage } from '../types';
 import { MessageSquare, Send, ChevronLeft, Search, Users, Plus, Sparkles, Camera, Smile, X } from 'lucide-react';
@@ -15,7 +15,11 @@ export const Communities: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newCircle, setNewCircle] = useState({ name: '', description: '', category: 'Fiction', image: '' });
+  const [creating, setCreating] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const createFileInputRef = React.useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
@@ -92,6 +96,39 @@ export const Communities: React.FC = () => {
       }
     }
   };
+
+  const handleCreateCommunity = async () => {
+    if (!user || !newCircle.name || !newCircle.description || !newCircle.image) return;
+
+    setCreating(true);
+    const community = await createCommunity(
+      newCircle.name,
+      newCircle.description,
+      newCircle.category,
+      newCircle.image,
+      user.id
+    );
+
+    if (community) {
+      setCommunities(prev => [community, ...prev]);
+      setMembershipStatus(prev => ({ ...prev, [community.id]: true }));
+      setShowCreateModal(false);
+      setNewCircle({ name: '', description: '', category: 'Fiction', image: '' });
+    }
+    setCreating(false);
+  };
+
+  const handleCreateImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewCircle(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -222,20 +259,28 @@ export const Communities: React.FC = () => {
           <h1 className="text-6xl font-black text-[#3e2723] playfair mb-4 tracking-tight">Reading Circles</h1>
           <p className="text-xl text-[#8d6e63] font-medium max-w-xl">Join community book chats and find your literary family.</p>
         </div>
-        <div className="relative group min-w-[300px]">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[#ff7a59] group-focus-within:scale-110 transition-transform" />
-          <input
-            type="text"
-            placeholder="Find a circle..."
-            className="w-full pl-16 pr-8 py-5 bg-white border-2 border-[#fff5f0] rounded-[2rem] text-lg font-bold shadow-xl shadow-clay/5 focus:outline-none focus:border-[#ff7a59] transition-all"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex flex-col md:flex-row items-center gap-4 min-w-[300px]">
+          <div className="relative group flex-1 w-full">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[#ff7a59] group-focus-within:scale-110 transition-transform" />
+            <input
+              type="text"
+              placeholder="Find a circle..."
+              className="w-full pl-16 pr-8 py-5 bg-white border-2 border-[#fff5f0] rounded-[2rem] text-lg font-bold shadow-xl shadow-clay/5 focus:outline-none focus:border-[#ff7a59] transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="p-5 grad-sunset text-white rounded-[2rem] shadow-xl shadow-clay/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3 font-black whitespace-nowrap"
+          >
+            <Plus size={24} /> Create Circle
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {communities.map((circle, i) => (
+        {communities.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).map((circle, i) => (
           <div
             key={circle.id}
             onClick={() => membershipStatus[circle.id] && setSelectedCommunity(circle)}
@@ -276,6 +321,93 @@ export const Communities: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Create Community Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#3e2723]/40 backdrop-blur-sm animate-in fade-in transition-all">
+          <div className="bg-white w-full max-w-xl rounded-[3.5rem] border-4 border-[#fff5f0] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b-2 border-[#fffaf8] flex justify-between items-center bg-[#fffcf9]">
+              <h2 className="text-3xl font-black text-[#3e2723] playfair">Start a Circle</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-3 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#ff7a59] ml-4">Banner Image</label>
+                <div
+                  onClick={() => createFileInputRef.current?.click()}
+                  className="h-40 w-full rounded-[2rem] bg-[#fffaf8] border-4 border-dashed border-[#fff5f0] hover:border-[#ff7a59]/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center group"
+                >
+                  {newCircle.image ? (
+                    <img src={newCircle.image} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <Camera size={40} className="text-[#ff7a59] mb-2 group-hover:scale-110 transition-transform" />
+                      <p className="text-[#8d6e63] font-bold text-sm">Upload a cover...</p>
+                    </>
+                  )}
+                  <input type="file" ref={createFileInputRef} className="hidden" accept="image/*" onChange={handleCreateImageUpload} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#ff7a59] ml-4">Circle Name</label>
+                  <input
+                    type="text"
+                    placeholder="E.g. The Hobbit Hole"
+                    className="w-full px-6 py-4 bg-[#fffaf8] border-2 border-[#fff5f0] rounded-2xl font-bold text-[#3e2723] focus:border-[#ff7a59] outline-none transition-all"
+                    value={newCircle.name}
+                    onChange={(e) => setNewCircle(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#ff7a59] ml-4">Category</label>
+                  <select
+                    className="w-full px-6 py-4 bg-[#fffaf8] border-2 border-[#fff5f0] rounded-2xl font-bold text-[#3e2723] focus:border-[#ff7a59] outline-none transition-all appearance-none"
+                    value={newCircle.category}
+                    onChange={(e) => setNewCircle(prev => ({ ...prev, category: e.target.value }))}
+                  >
+                    <option>Fiction</option>
+                    <option>Non-Fiction</option>
+                    <option>Classic</option>
+                    <option>Mystery</option>
+                    <option>Sci-Fi</option>
+                    <option>Fantasy</option>
+                    <option>Romance</option>
+                    <option>Horror</option>
+                    <option>Self-Help</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[#ff7a59] ml-4">Pitch Your Circle</label>
+                <textarea
+                  placeholder="What's this community about?"
+                  className="w-full px-6 py-4 bg-[#fffaf8] border-2 border-[#fff5f0] rounded-2xl font-bold text-[#3e2723] focus:border-[#ff7a59] outline-none transition-all min-h-[100px] resize-none"
+                  value={newCircle.description}
+                  onChange={(e) => setNewCircle(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+
+              <button
+                onClick={handleCreateCommunity}
+                disabled={creating || !newCircle.name || !newCircle.description || !newCircle.image}
+                className={`w-full py-5 rounded-[2rem] font-black text-xl shadow-xl transition-all flex items-center justify-center gap-3 ${creating || !newCircle.name || !newCircle.description || !newCircle.image ? 'bg-gray-100 text-gray-400' : 'grad-sunset text-white shadow-clay/20 hover:scale-[1.02]'}`}
+              >
+                {creating ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Sparkles size={24} />}
+                {creating ? 'Creating...' : 'Launch Circle'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
